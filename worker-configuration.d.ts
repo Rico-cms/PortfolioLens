@@ -5,7 +5,7 @@ interface Env {
   AI: Ai;
   BROWSER: Fetcher;
   DB: D1Database;
-  SCREENSHOTS: R2Bucket;
+  SCREENSHOTS?: R2Bucket;
   APP_ORIGIN: string;
   AI_MODEL: string;
   TURNSTILE_SITE_KEY?: string;

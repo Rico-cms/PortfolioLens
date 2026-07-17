@@ -40,7 +40,7 @@ async function createAudit(request: Request, env: Env, ctx: ExecutionContext): P
   const captured = await capturePortfolio(target, env);
   const scored = scoreSignals(captured.signals);
   const aiCopy = await enhanceWithAi(captured.signals, scored.overallScore, scored.recommendations, env);
-  const screenshotKey = captured.screenshot ? `${id}.webp` : null;
+  const screenshotKey = captured.screenshot && env.SCREENSHOTS ? `${id}.webp` : null;
 
   const audit: AuditResult = {
     id,
@@ -63,7 +63,7 @@ async function createAudit(request: Request, env: Env, ctx: ExecutionContext): P
       "INSERT INTO audits (id, url, hostname, overall_score, result_json, screenshot_key) VALUES (?, ?, ?, ?, ?, ?)",
     ).bind(id, audit.url, audit.hostname, audit.overallScore, JSON.stringify(audit), screenshotKey).run(),
   ];
-  if (captured.screenshot && screenshotKey) {
+  if (captured.screenshot && screenshotKey && env.SCREENSHOTS) {
     writes.push(env.SCREENSHOTS.put(screenshotKey, captured.screenshot, {
       httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=86400" },
     }));
@@ -81,6 +81,7 @@ async function getAudit(id: string, env: Env) {
 }
 
 async function getScreenshot(key: string, env: Env) {
+  if (!env.SCREENSHOTS) return json({ error: "Stockage de captures non activé." }, 404);
   const object = await env.SCREENSHOTS.get(key);
   if (!object) return json({ error: "Capture introuvable." }, 404);
   const headers = new Headers();
@@ -228,7 +229,7 @@ async function verifyTurnstile(token: string | undefined, request: Request, secr
 async function cleanOldAudits(env: Env) {
   const old = await env.DB.prepare("SELECT screenshot_key FROM audits WHERE created_at < datetime('now', '-30 days') LIMIT 50").all<{ screenshot_key: string | null }>();
   const keys = old.results.map((row) => row.screenshot_key).filter((key): key is string => Boolean(key));
-  if (keys.length) await env.SCREENSHOTS.delete(keys);
+  if (keys.length && env.SCREENSHOTS) await env.SCREENSHOTS.delete(keys);
   await env.DB.prepare("DELETE FROM audits WHERE created_at < datetime('now', '-30 days')").run();
 }
 

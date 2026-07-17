@@ -16,18 +16,12 @@
     {
       "binding": "DB",
       "database_name": "portfoliolens-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "2e3cd082-a2a7-47f3-9c3d-3cc50eba2b7f",
       "migrations_dir": "migrations"
     }
   ],
-  "r2_buckets": [
-    {
-      "binding": "SCREENSHOTS",
-      "bucket_name": "portfoliolens-screenshots"
-    }
-  ],
   "vars": {
-    "APP_ORIGIN": "http://localhost:5173",
+    "APP_ORIGIN": "https://portfoliolens.dahissihogabriel.workers.dev",
     "AI_MODEL": "@cf/meta/llama-3.2-3b-instruct"
   },
   "observability": { "enabled": true }

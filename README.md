@@ -9,7 +9,7 @@ PortfolioLens audite un portfolio développeur comme le ferait un recruteur pres
 - Browser Run pour charger la page et produire une capture ;
 - Workers AI pour le verdict et les recommandations éditoriales ;
 - D1 pour conserver les rapports pendant 30 jours ;
-- R2 pour les captures WebP ;
+- R2, facultatif, pour les captures WebP ;
 - Turnstile, facultatif en local, pour protéger la création d’audits.
 
 Si Browser Run ou Workers AI sont indisponibles, l’application bascule respectivement vers une analyse HTML par `fetch` et des recommandations déterministes. Les rapports restent donc utilisables sans IA.
@@ -32,10 +32,9 @@ Authentifie Wrangler puis crée les ressources gratuites :
 ```bash
 npx wrangler login
 npx wrangler d1 create portfoliolens-db
-npx wrangler r2 bucket create portfoliolens-screenshots
 ```
 
-Copie le `database_id` retourné par la première commande dans `wrangler.jsonc`, à la place de `REPLACE_WITH_YOUR_D1_DATABASE_ID`, puis exécute :
+Copie le `database_id` retourné dans `wrangler.jsonc`, à la place de `REPLACE_WITH_YOUR_D1_DATABASE_ID`, puis exécute :
 
 ```bash
 npm run db:migrate:remote
