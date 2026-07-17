@@ -1,0 +1,11 @@
+node_modules
+dist
+outputs
+.wrangler
+.dev.vars
+worker-configuration.d.ts.bak
+.DS_Store
+*.log
+*.tsbuildinfo
+work/local-audits.json
+.github/workflows/deploy-cloudflare.yml
