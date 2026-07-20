@@ -10,6 +10,12 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  "routes": [
+    {
+      "pattern": "lens.bookemrick.online",
+      "custom_domain": true
+    }
+  ],
   "ai": { "binding": "AI" },
   "browser": { "binding": "BROWSER" },
   "d1_databases": [
@@ -21,7 +27,7 @@
     }
   ],
   "vars": {
-    "APP_ORIGIN": "https://portfoliolens.dahissihogabriel.workers.dev",
+    "APP_ORIGIN": "https://lens.bookemrick.online",
     "AI_MODEL": "@cf/meta/llama-3.2-3b-instruct"
   },
   "observability": { "enabled": true }
