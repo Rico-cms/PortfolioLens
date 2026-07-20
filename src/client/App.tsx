@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { AuditResult, CreateAuditResponse, ScoreKey } from "../shared/types";
+import { AdminPage } from "./Admin";
+import { AnalyticsTracker, CookieConsent, CookieSettingsButton, PrivacyPage } from "./Privacy";
+import { trackEvent } from "./analytics";
 
 const scoreLabels: Record<ScoreKey, string> = {
   recruiter: "Clarté recruteur",
@@ -221,6 +224,16 @@ function Header() {
   );
 }
 
+function SiteFooter() {
+  return (
+    <footer>
+      <Logo />
+      <p>Construit à l’edge, avec soin.</p>
+      <div className="footer-links"><a href="/privacy">Confidentialité</a><CookieSettingsButton /><a href="/admin">Espace admin</a><span>© {new Date().getFullYear()}</span></div>
+    </footer>
+  );
+}
+
 function CreatorSection({ compact = false }: { compact?: boolean }) {
   return (
     <section className={`creator-section ${compact ? "creator-section-compact" : ""}`} id="createur">
@@ -255,6 +268,7 @@ function AuditForm({ initialUrl = "" }: { initialUrl?: string }) {
     event.preventDefault();
     setError("");
     setLoading(true);
+    trackEvent("audit_started");
     try {
       const response = await fetch("/api/audits", {
         method: "POST",
@@ -265,6 +279,7 @@ function AuditForm({ initialUrl = "" }: { initialUrl?: string }) {
       if (!contentType.includes("application/json")) throw new Error("L’API d’audit n’est pas démarrée. Utilise npm run dev:local.");
       const body = (await response.json()) as CreateAuditResponse | { error: string };
       if (!response.ok || !("audit" in body)) throw new Error("error" in body ? body.error : "L’analyse a échoué.");
+      trackEvent("audit_completed");
       window.history.pushState({}, "", `/report/${body.audit.id}`);
       window.dispatchEvent(new PopStateEvent("popstate"));
     } catch (reason) {
@@ -349,7 +364,7 @@ function Home() {
 
         <CreatorSection />
       </main>
-      <footer><Logo /><p>Construit à l’edge, avec soin.</p><span>© {new Date().getFullYear()}</span></footer>
+      <SiteFooter />
     </>
   );
 }
@@ -449,18 +464,25 @@ function Report({ id }: { id: string }) {
         <div className="report-cta"><h2>Une autre version à tester ?</h2><AuditForm initialUrl={audit.url} /></div>
         <CreatorSection compact />
       </main>
-      <footer><Logo /><p>Construit à l’edge, avec soin.</p><span>© {new Date().getFullYear()}</span></footer>
+      <SiteFooter />
     </>
   );
 }
 
 export default function App() {
-  const [, setPath] = useState(location.pathname);
+  const [path, setPath] = useState(location.pathname);
   useEffect(() => {
     const update = () => setPath(location.pathname);
     addEventListener("popstate", update);
     return () => removeEventListener("popstate", update);
   }, []);
-  const match = location.pathname.match(/^\/report\/([^/]+)$/);
-  return match ? <Report id={match[1]} /> : <Home />;
+  const match = path.match(/^\/report\/([^/]+)$/);
+  const page = path === "/admin"
+    ? <AdminPage logo={<Logo />} />
+    : path === "/privacy"
+      ? <PrivacyPage header={<Header />} footer={<SiteFooter />} />
+      : match
+        ? <Report id={match[1]} />
+        : <Home />;
+  return <><AnalyticsTracker pathname={path} />{page}{path !== "/admin" && <CookieConsent />}</>;
 }

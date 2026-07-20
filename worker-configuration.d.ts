@@ -10,4 +10,5 @@ interface Env {
   AI_MODEL: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET?: string;
+  ADMIN_PASSWORD?: string;
 }

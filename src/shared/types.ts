@@ -61,3 +61,38 @@ export interface CreateAuditResponse {
   audit: AuditResult;
   mode: "browser" | "fallback";
 }
+
+export type AnalyticsEventName = "page_view" | "audit_started" | "audit_completed" | "consent_granted";
+
+export interface AnalyticsEventPayload {
+  event: AnalyticsEventName;
+  visitorId: string;
+  sessionId: string;
+  path: string;
+  referrerHost?: string;
+  locale?: string;
+}
+
+export interface AdminDashboardData {
+  generatedAt: string;
+  periodDays: number;
+  totals: {
+    pageViews: number;
+    uniqueVisitors: number;
+    sessions: number;
+    audits: number;
+    conversionRate: number;
+    averageScore: number;
+  };
+  scoreAverages: Record<ScoreKey, number>;
+  trend: Array<{ day: string; pageViews: number; audits: number }>;
+  commonIssues: Array<{ key: string; label: string; count: number; percentage: number }>;
+  devices: Array<{ label: string; count: number; percentage: number }>;
+  countries: Array<{ label: string; count: number; percentage: number }>;
+  recentAudits: Array<{
+    id: string;
+    hostname: string;
+    overallScore: number;
+    createdAt: string;
+  }>;
+}

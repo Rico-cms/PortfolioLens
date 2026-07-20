@@ -4,6 +4,7 @@
 import hashlib
 import ipaddress
 import json
+import os
 import re
 import time
 import urllib.error
@@ -167,24 +168,36 @@ def make_report(s, hostname):
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs): super().__init__(*args, directory=str(STATIC), **kwargs)
 
-    def send_json(self, payload, status=200):
+    def send_json(self, payload, status=200, extra_headers=None):
         body = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for name, value in (extra_headers or {}).items(): self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
         if self.path == "/api/config": return self.send_json({"turnstileSiteKey": None})
         if self.path == "/api/health": return self.send_json({"ok": True, "service": "PortfolioLens local"})
+        if self.path.startswith("/api/admin/dashboard"):
+            if "pl_admin_local=1" not in self.headers.get("Cookie", ""): return self.send_json({"error": "Authentification requise."}, 401)
+            return self.send_json({"dashboard": local_dashboard()})
         match = re.fullmatch(r"/api/audits/([a-f0-9]{12})", self.path)
         if match: return self.send_json({"audit": REPORTS[match.group(1)]}) if match.group(1) in REPORTS else self.send_json({"error": "Rapport introuvable."}, 404)
-        if self.path.startswith("/report/"):
+        if self.path.startswith("/report/") or self.path in {"/admin", "/privacy"}:
             self.path = "/index.html"
         return super().do_GET()
 
     def do_POST(self):
+        if self.path == "/api/analytics/events": return self.send_json({"ok": True}, 202)
+        if self.path == "/api/admin/logout": return self.send_json({"ok": True}, 200, {"Set-Cookie": "pl_admin_local=; Path=/; Max-Age=0"})
+        if self.path == "/api/admin/login":
+            length = min(int(self.headers.get("Content-Length", "0")), 4_096)
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            expected = os.environ.get("PORTFOLIOLENS_LOCAL_ADMIN_PASSWORD", "local")
+            if payload.get("password") != expected: return self.send_json({"error": "Mot de passe incorrect."}, 401)
+            return self.send_json({"ok": True}, 200, {"Set-Cookie": "pl_admin_local=1; Path=/; HttpOnly; SameSite=Strict"})
         if self.path != "/api/audits": return self.send_json({"error": "Route introuvable."}, 404)
         try:
             length = min(int(self.headers.get("Content-Length", "0")), 20_000)
@@ -199,6 +212,39 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception as error:
             print("Audit error:", repr(error))
             return self.send_json({"error": "Impossible de charger ce site depuis le serveur local."}, 502)
+
+
+def local_dashboard():
+    audits = list(REPORTS.values())
+    count = len(audits)
+    score_keys = ["recruiter", "technical", "accessibility", "projects", "security"]
+    averages = {key: round(sum(audit["scores"].get(key, 0) for audit in audits) / count) if count else 0 for key in score_keys}
+    issue_definitions = [
+        ("missing_csp", "Content Security Policy absente", lambda s: not s.get("hasCsp")),
+        ("missing_frame", "Protection anti-iframe absente", lambda s: not s.get("hasFrameProtection")),
+        ("missing_contact", "Contact difficile à détecter", lambda s: not s.get("hasContact")),
+        ("missing_projects", "Section projets non détectée", lambda s: not s.get("hasProjects")),
+        ("missing_proofs", "Moins de deux preuves de projet", lambda s: s.get("projectLinkCount", 0) < 2),
+        ("missing_github", "Lien GitHub non détecté", lambda s: not s.get("hasGithub")),
+    ]
+    issues = []
+    for key, label, predicate in issue_definitions:
+        affected = sum(1 for audit in audits if predicate(audit["signals"]))
+        if affected: issues.append({"key": key, "label": label, "count": affected, "percentage": round(affected * 100 / count)})
+    issues.sort(key=lambda item: item["percentage"], reverse=True)
+    today = datetime.now(timezone.utc).date()
+    trend = []
+    for offset in range(29, -1, -1):
+        day = today.fromordinal(today.toordinal() - offset).isoformat()
+        daily_audits = sum(1 for audit in audits if audit["createdAt"][:10] == day)
+        trend.append({"day": day, "pageViews": 0, "audits": daily_audits})
+    recent = sorted(audits, key=lambda audit: audit["createdAt"], reverse=True)[:12]
+    return {
+        "generatedAt": datetime.now(timezone.utc).isoformat(), "periodDays": 30,
+        "totals": {"pageViews": 0, "uniqueVisitors": 0, "sessions": 0, "audits": count, "conversionRate": 0, "averageScore": round(sum(audit["overallScore"] for audit in audits) / count) if count else 0},
+        "scoreAverages": averages, "trend": trend, "commonIssues": issues, "devices": [], "countries": [],
+        "recentAudits": [{"id": audit["id"], "hostname": audit["hostname"], "overallScore": audit["overallScore"], "createdAt": audit["createdAt"]} for audit in recent],
+    }
 
 
 if __name__ == "__main__":
