@@ -328,6 +328,25 @@ function Home() {
             <li><b>3</b><div><h3>Tu repars avec un plan</h3><p>Les améliorations sont classées par impact, sans jargon inutile.</p></div></li>
           </ol>
         </section>
+
+        <section className="product-film" aria-labelledby="product-film-title">
+          <div className="product-film-copy">
+            <span className="section-kicker">PortfolioLens en action</span>
+            <h2 id="product-film-title">Du portfolio brut<br />au <em>signal clair.</em></h2>
+            <p id="product-film-description">Découvre comment PortfolioLens transforme une page publique en un rapport lisible, argumenté et immédiatement actionnable.</p>
+            <a href="#audit">Auditer mon portfolio <span>↗</span></a>
+          </div>
+          <figure className="product-film-frame">
+            <div>
+              <video controls playsInline preload="none" poster="/portfoliolens-demo.jpg" aria-label="Démonstration de PortfolioLens en 20 secondes" aria-describedby="product-film-description">
+                <source src="/portfoliolens-demo.mp4" type="video/mp4" />
+                Ton navigateur ne permet pas de lire cette vidéo. Tu peux <a href="/portfoliolens-demo.mp4">ouvrir la démonstration directement</a>.
+              </video>
+            </div>
+            <figcaption><span>Démonstration produit</span><span>PortfolioLens · 16:9</span></figcaption>
+          </figure>
+        </section>
+
         <CreatorSection />
       </main>
       <footer><Logo /><p>Construit à l’edge, avec soin.</p><span>© {new Date().getFullYear()}</span></footer>
