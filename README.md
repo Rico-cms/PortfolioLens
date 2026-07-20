@@ -14,6 +14,12 @@ PortfolioLens audite un portfolio développeur comme le ferait un recruteur pres
 
 Si Browser Run ou Workers AI sont indisponibles, l’application bascule respectivement vers une analyse HTML par `fetch` et des recommandations déterministes. Les rapports restent donc utilisables sans IA.
 
+## Méthodologie d’accessibilité
+
+Le score « Indicateurs d’accessibilité » observe automatiquement quelques fondamentaux liés aux WCAG 2.2 : langue principale de la page (3.1.1), structure sémantique (1.3.1) et alternatives textuelles des images (1.1.1). Il ne constitue ni un audit exhaustif ni une certification de conformité WCAG.
+
+Le contraste, la navigation au clavier, la visibilité du focus, les formulaires et les technologies d’assistance nécessitent une revue humaine complémentaire. Le rapport affiche cette limite et renvoie vers la [présentation officielle des WCAG par le W3C](https://www.w3.org/WAI/standards-guidelines/wcag/).
+
 ## Développement local
 
 Prérequis : Node.js 20 ou plus récent et un compte Cloudflare.

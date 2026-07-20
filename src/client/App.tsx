@@ -4,10 +4,12 @@ import type { AuditResult, CreateAuditResponse, ScoreKey } from "../shared/types
 const scoreLabels: Record<ScoreKey, string> = {
   recruiter: "Clarté recruteur",
   technical: "Qualité technique",
-  accessibility: "Accessibilité",
+  accessibility: "Indicateurs d’accessibilité",
   projects: "Preuves & projets",
   security: "Sécurité",
 };
+
+const wcagOverviewUrl = "https://www.w3.org/WAI/standards-guidelines/wcag/";
 
 const creator = {
   name: "Gabriel Emrick Dahissiho",
@@ -28,9 +30,9 @@ const signalDefinitions: Record<ScoreKey, { question: string; description: strin
     criteria: ["Page disponible sans erreur", "Réponse rapide du document", "Connexion HTTPS", "Viewport adapté au mobile"],
   },
   accessibility: {
-    question: "Le contenu est-il structuré et compréhensible par le plus grand nombre ?",
-    description: "Le score vérifie plusieurs fondamentaux accessibles directement dans le HTML, notamment la langue, les titres, les zones de navigation et les alternatives d’image.",
-    criteria: ["Langue du document déclarée", "Un titre H1 principal", "Zones main et nav identifiables", "Textes alternatifs des images"],
+    question: "Quels fondamentaux d’accessibilité sont détectables automatiquement dans le HTML ?",
+    description: "Cet indicateur vérifie une sélection limitée de signaux techniques liés aux WCAG 2.2. Il ne constitue ni un audit exhaustif ni une certification de conformité.",
+    criteria: ["WCAG 3.1.1 (A) — Langue de la page déclarée", "WCAG 1.3.1 (A) — Structure et relations sémantiques", "WCAG 1.1.1 (A) — Alternatives textuelles des images", "Présence d’un titre H1 principal et de repères main/nav"],
   },
   projects: {
     question: "Tes compétences sont-elles soutenues par des preuves consultables ?",
@@ -85,12 +87,13 @@ function SignalDetail({ signal, audit, printable = false }: { signal: ScoreKey; 
   const definition = signalDefinitions[signal];
   const relatedFindings = audit.findings.filter((finding) => finding.category === signal);
   return (
-    <article className={`signal-detail ${printable ? "signal-detail-printable" : ""}`}>
+    <article id={printable ? undefined : `signal-detail-${signal}`} className={`signal-detail ${printable ? "signal-detail-printable" : ""}`}>
       <div className="signal-detail-head">
         <div><span>Comprendre le score</span><h3>{scoreLabels[signal]} · {audit.scores[signal]}/100</h3></div>
         <p>{definition.question}</p>
       </div>
       <p className="signal-description">{definition.description}</p>
+      {signal === "accessibility" && <div className="scope-warning" role="note"><strong>Portée limitée</strong><span>Un résultat de 100/100 signifie uniquement que les signaux automatisés ci-dessous ont été détectés. Le contraste, la navigation au clavier, l’ordre du focus, les formulaires et l’expérience avec les technologies d’assistance demandent encore une vérification humaine.</span></div>}
       <div className="fact-grid">
         {signalFacts(signal, audit).map((fact) => <div key={fact.label}><i className={fact.good ? "fact-good" : "fact-missing"} /> <span>{fact.label}</span><strong>{fact.value}</strong></div>)}
       </div>
@@ -99,6 +102,44 @@ function SignalDetail({ signal, audit, printable = false }: { signal: ScoreKey; 
         <div><h4>Ce qui explique cette note</h4>{relatedFindings.length ? <ul>{relatedFindings.map((finding) => <li key={finding.title}>{finding.title} — {finding.detail}</li>)}</ul> : <p>Aucun problème important n’a été détecté pour ce signal.</p>}</div>
       </div>
     </article>
+  );
+}
+
+function scoreStatus(key: ScoreKey, score: number) {
+  if (key === "accessibility") return score >= 80 ? "Signaux détectés" : score >= 60 ? "Signaux à renforcer" : "Vérification prioritaire";
+  return score >= 80 ? "Très solide" : score >= 60 ? "À renforcer" : "Prioritaire";
+}
+
+function WcagMethodology() {
+  return (
+    <section className="wcag-methodology" aria-labelledby="wcag-methodology-title">
+      <div className="wcag-intro">
+        <span className="section-kicker">Méthodologie d’accessibilité</span>
+        <h2 id="wcag-methodology-title">Des indicateurs utiles,<br /><em>pas une certification.</em></h2>
+        <p>PortfolioLens s’appuie sur les WCAG 2.2 comme cadre de référence. Une conformité WCAG se détermine sur des critères de succès testables, aux niveaux A, AA et AAA, et ne peut pas être conclue à partir de quatre contrôles automatiques.</p>
+        <a href={wcagOverviewUrl} target="_blank" rel="noreferrer">Consulter la référence officielle W3C <span>↗</span></a>
+      </div>
+      <div className="wcag-columns">
+        <article>
+          <span>Contrôles automatisés</span>
+          <h3>Ce que PortfolioLens observe</h3>
+          <ul>
+            <li><b>1.1.1 · Niveau A</b><small>Présence d’alternatives textuelles sur les images.</small></li>
+            <li><b>1.3.1 · Niveau A</b><small>Structure sémantique : titres et repères principaux.</small></li>
+            <li><b>3.1.1 · Niveau A</b><small>Langue principale déclarée dans le document.</small></li>
+          </ul>
+        </article>
+        <article>
+          <span>Revue humaine nécessaire</span>
+          <h3>Ce que le score ne valide pas</h3>
+          <ul>
+            <li><b>1.4.3 · Niveau AA</b><small>Contraste réel du texte et des composants.</small></li>
+            <li><b>2.1.1 · Niveau A</b><small>Utilisation complète au clavier.</small></li>
+            <li><b>2.4.7 · Niveau AA</b><small>Visibilité et cohérence du focus.</small></li>
+          </ul>
+        </article>
+      </div>
+    </section>
   );
 }
 
@@ -275,7 +316,7 @@ function Home() {
             <article><span>01</span><h3>Lecture recruteur</h3><p>Ton rôle, ta valeur et ton niveau sont-ils évidents dès le premier écran ?</p></article>
             <article><span>02</span><h3>Preuves & projets</h3><p>Tes réalisations racontent-elles le problème, ta contribution et le résultat ?</p></article>
             <article><span>03</span><h3>Qualité technique</h3><p>Structure, vitesse, mobile et métadonnées : les fondamentaux sont-ils solides ?</p></article>
-            <article><span>04</span><h3>Accessibilité</h3><p>Ton travail est-il lisible et navigable par le plus grand nombre ?</p></article>
+            <article><span>04</span><h3>Indicateurs d’accessibilité</h3><p>Quels fondamentaux WCAG 2.2 peut-on vérifier automatiquement dans la page ?</p></article>
           </div>
         </section>
 
@@ -346,14 +387,16 @@ function Report({ id }: { id: string }) {
           <div className="score-grid">
             {(Object.entries(audit.scores) as [ScoreKey, number][]).map(([key, score]) => (
               <article key={key} className={selectedSignal === key ? "score-card-active" : ""}>
-                <button type="button" aria-expanded={selectedSignal === key} onClick={() => setSelectedSignal(selectedSignal === key ? null : key)}>
-                  <ScoreRing score={score} /><h3>{scoreLabels[key]}</h3><p>{score >= 80 ? "Très solide" : score >= 60 ? "À renforcer" : "Prioritaire"}</p><span className="detail-link">{selectedSignal === key ? "Fermer" : "Voir le détail"} {selectedSignal === key ? "↑" : "↓"}</span>
+                <button type="button" aria-expanded={selectedSignal === key} aria-controls={`signal-detail-${key}`} onClick={() => setSelectedSignal(selectedSignal === key ? null : key)}>
+                  <ScoreRing score={score} /><h3>{scoreLabels[key]}</h3><p>{scoreStatus(key, score)}</p><span className="detail-link">{selectedSignal === key ? "Fermer" : "Voir le détail"} {selectedSignal === key ? "↑" : "↓"}</span>
                 </button>
               </article>
             ))}
           </div>
           {selectedSignal && <SignalDetail signal={selectedSignal} audit={audit} />}
         </section>
+
+        <WcagMethodology />
 
         <section className="pdf-signal-details">
           <h2>Détail des cinq signaux décisifs</h2>
