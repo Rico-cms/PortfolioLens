@@ -12,7 +12,7 @@ PortfolioLens audite un portfolio développeur comme le ferait un recruteur pres
 - R2, facultatif, pour les captures WebP ;
 - Turnstile, facultatif en local, pour protéger la création d’audits.
 - D1 pour une mesure d’audience propriétaire, consentie et pseudonymisée ;
-- un espace administrateur privé pour les tendances, les problèmes fréquents et l’export CSV anonymisé.
+- un espace administrateur privé pour les tendances, l’évolution des portfolios, les problèmes fréquents et l’export CSV complet.
 
 Si Browser Run ou Workers AI sont indisponibles, l’application bascule respectivement vers une analyse HTML par `fetch` et des recommandations déterministes. Les rapports restent donc utilisables sans IA.
 
@@ -76,7 +76,7 @@ npm run db:migrate:remote
 npm run deploy
 ```
 
-L’export CSV ne contient ni URL, ni nom de domaine, ni identifiant visiteur. Il contient uniquement les scores et signaux techniques anonymisés, afin de produire des cas d’usage et des statistiques éditoriales fiables.
+L’export CSV contient l’adresse publique soumise, le domaine, le numéro de passage, l’évolution du score et l’ensemble des signaux techniques observés. Il ne contient aucun identifiant analytics, aucune adresse IP et aucune donnée de session. Il permet ainsi de produire des cas d’usage fiables et de suivre les améliorations d’un portfolio au fil de ses réanalyses.
 
 Pour renforcer encore l’accès propriétaire, il est recommandé de placer `/admin` et `/api/admin/*` derrière Cloudflare Access en complément du mot de passe applicatif.
 
@@ -87,7 +87,7 @@ PortfolioLens ne déclenche aucune mesure d’audience avant accord. Le refus es
 - choix et identifiant de mesure : 6 mois ;
 - événements d’audience : 90 jours ;
 - rapports détaillés : 30 jours ;
-- observations anonymisées : 12 mois.
+- historique technique associé à l’adresse publique soumise : 12 mois.
 
 Les adresses IP ne sont pas enregistrées. Les identifiants aléatoires sont hachés avant leur écriture dans D1 et les statistiques sont réservées à PortfolioLens.
 
@@ -114,7 +114,7 @@ npm run deploy    # build et déploiement
 - Turnstile bloque les créations automatisées lorsque ses deux clés sont configurées ;
 - les captures ne sont accessibles qu’avec un identifiant imprévisible ;
 - les rapports et captures de plus de 30 jours sont supprimés progressivement ;
-- les événements analytics sont supprimés après 90 jours et les observations anonymisées après 12 mois ;
+- les événements analytics sont supprimés après 90 jours et l’historique technique des portfolios après 12 mois ;
 - aucune mesure d’audience n’est envoyée avant consentement ;
 - l’application utilise les quotas Free de Workers, Browser Run, Workers AI, D1 et R2.
 

@@ -92,7 +92,12 @@ export interface AdminDashboardData {
   recentAudits: Array<{
     id: string;
     hostname: string;
+    url: string;
     overallScore: number;
+    previousScore: number | null;
+    scoreDelta: number | null;
+    analysisCount: number;
+    reportAvailable: boolean;
     createdAt: string;
   }>;
 }

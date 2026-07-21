@@ -65,15 +65,15 @@ export function PrivacyPage({ header, footer }: { header: ReactNode; footer: Rea
         <div className="privacy-grid">
           <section>
             <span>01</span><h2>Ce que nous mesurons</h2>
-            <p>Après accord : pages consultées, session pseudonyme, type d’appareil, langue du navigateur et pays approximatif fourni par Cloudflare. Les audits conservent aussi les scores et signaux techniques du portfolio soumis.</p>
+            <p>Après accord : pages consultées, session pseudonyme, type d’appareil, langue du navigateur et pays approximatif fourni par Cloudflare. Lorsqu’un audit est demandé, nous conservons aussi l’adresse publique soumise, ses scores et ses signaux techniques afin de mesurer son évolution lors des passages suivants.</p>
           </section>
           <section>
             <span>02</span><h2>Ce que nous excluons</h2>
-            <p>Nous ne stockons ni adresse IP, ni nom, ni e-mail, ni historique de navigation externe. Les identifiants analytics sont hachés avant leur enregistrement dans D1.</p>
+            <p>Nous ne stockons ni adresse IP, ni nom, ni e-mail, ni historique de navigation externe. Seule l’adresse publique saisie volontairement pour l’audit est associée aux résultats. Les identifiants analytics sont hachés avant leur enregistrement dans D1.</p>
           </section>
           <section>
             <span>03</span><h2>Durées de conservation</h2>
-            <p>Le choix et l’identifiant de mesure durent 6 mois. Les événements analytics sont supprimés après 90 jours, les rapports détaillés après 30 jours et les observations anonymisées après 12 mois.</p>
+            <p>Le choix et l’identifiant de mesure durent 6 mois. Les événements analytics sont supprimés après 90 jours, les rapports détaillés après 30 jours et l’historique technique associé à l’adresse publique du portfolio après 12 mois.</p>
           </section>
           <section>
             <span>04</span><h2>Les cookies utilisés</h2>

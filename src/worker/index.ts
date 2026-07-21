@@ -85,8 +85,10 @@ async function createAudit(request: Request, env: Env, ctx: ExecutionContext): P
         audit_id, overall_score, recruiter_score, technical_score, accessibility_score,
         projects_score, security_score, has_contact, has_github, has_linkedin,
         has_projects, project_link_count, has_csp, has_frame_protection,
-        has_referrer_policy, has_lang, missing_alt_count, image_count, load_time_ms, uses_https
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        has_referrer_policy, has_lang, missing_alt_count, image_count, load_time_ms, uses_https,
+        hostname, portfolio_url, status_code, title, description_length, text_length,
+        h1_count, h2_count, has_viewport, has_main, has_nav, has_skills, link_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id,
       audit.overallScore,
@@ -108,6 +110,19 @@ async function createAudit(request: Request, env: Env, ctx: ExecutionContext): P
       audit.signals.imageCount,
       audit.signals.loadTimeMs,
       booleanNumber(audit.signals.usesHttps),
+      audit.hostname,
+      audit.url,
+      audit.signals.statusCode,
+      audit.signals.title.slice(0, 300),
+      audit.signals.description.length,
+      audit.signals.textLength,
+      audit.signals.h1.length,
+      audit.signals.h2Count,
+      booleanNumber(audit.signals.hasViewport),
+      booleanNumber(audit.signals.hasMain),
+      booleanNumber(audit.signals.hasNav),
+      booleanNumber(audit.signals.hasSkills),
+      audit.signals.linkCount,
     ).run(),
   ];
   if (captured.screenshot && screenshotKey && env.SCREENSHOTS) {
@@ -255,8 +270,35 @@ async function adminDashboard(request: Request, env: Env) {
        GROUP BY country_code ORDER BY count DESC LIMIT 8`,
     ).bind(modifier).all<{ label: string; count: number }>(),
     env.DB.prepare(
-      `SELECT id, hostname, overall_score, created_at FROM audits ORDER BY created_at DESC LIMIT 12`,
-    ).all<{ id: string; hostname: string; overall_score: number; created_at: string }>(),
+      `WITH history AS (
+        SELECT
+          audit_id AS id,
+          hostname,
+          portfolio_url,
+          overall_score,
+          created_at,
+          LAG(overall_score) OVER (PARTITION BY hostname ORDER BY created_at) AS previous_score,
+          ROW_NUMBER() OVER (PARTITION BY hostname ORDER BY created_at) AS analysis_count
+        FROM audit_observations
+        WHERE hostname IS NOT NULL
+      )
+      SELECT
+        history.*,
+        CASE WHEN audits.id IS NULL THEN 0 ELSE 1 END AS report_available
+      FROM history
+      LEFT JOIN audits ON audits.id = history.id
+      ORDER BY history.created_at DESC
+      LIMIT 30`,
+    ).all<{
+      id: string;
+      hostname: string;
+      portfolio_url: string | null;
+      overall_score: number;
+      previous_score: number | null;
+      analysis_count: number;
+      report_available: number;
+      created_at: string;
+    }>(),
   ]);
 
   const auditTotal = numberValue(observations?.audits);
@@ -299,7 +341,17 @@ async function adminDashboard(request: Request, env: Env) {
       .sort((left, right) => right.percentage - left.percentage),
     devices: distribution(devices.results, pageViews),
     countries: distribution(countries.results, pageViews),
-    recentAudits: recentAudits.results.map((row) => ({ id: row.id, hostname: row.hostname, overallScore: row.overall_score, createdAt: row.created_at })),
+    recentAudits: recentAudits.results.map((row) => ({
+      id: row.id,
+      hostname: row.hostname,
+      url: row.portfolio_url || `https://${row.hostname}`,
+      overallScore: row.overall_score,
+      previousScore: row.previous_score,
+      scoreDelta: row.previous_score === null ? null : row.overall_score - row.previous_score,
+      analysisCount: row.analysis_count,
+      reportAvailable: Boolean(row.report_available),
+      createdAt: row.created_at,
+    })),
   };
   return noStoreJson({ dashboard: data });
 }
@@ -308,24 +360,69 @@ async function exportAdminDataset(request: Request, env: Env) {
   if (!(await isAdminAuthenticated(request, env))) return noStoreJson({ error: "Authentification requise." }, 401);
   const periodDays = dashboardPeriod(new URL(request.url).searchParams.get("days"));
   const rows = await env.DB.prepare(
-    `SELECT created_at, overall_score, recruiter_score, technical_score, accessibility_score,
-      projects_score, security_score, has_contact, has_github, has_linkedin, has_projects,
-      project_link_count, has_csp, has_frame_protection, has_referrer_policy, has_lang,
-      missing_alt_count, image_count, load_time_ms, uses_https
-     FROM audit_observations WHERE created_at >= datetime('now', ?)
-     ORDER BY created_at DESC LIMIT 5000`,
-  ).bind(`-${periodDays} days`).all<Record<string, string | number>>();
+    `WITH history AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY hostname ORDER BY created_at) AS analysis_number,
+        LAG(overall_score) OVER (PARTITION BY hostname ORDER BY created_at) AS previous_score
+      FROM audit_observations
+    )
+    SELECT
+      created_at,
+      hostname,
+      portfolio_url,
+      analysis_number,
+      overall_score,
+      previous_score,
+      CASE WHEN previous_score IS NULL THEN NULL ELSE overall_score - previous_score END AS score_delta,
+      recruiter_score,
+      technical_score,
+      accessibility_score,
+      projects_score,
+      security_score,
+      status_code,
+      load_time_ms,
+      title,
+      length(COALESCE(title, '')) AS title_length,
+      description_length,
+      text_length,
+      h1_count,
+      h2_count,
+      image_count,
+      missing_alt_count,
+      link_count,
+      project_link_count,
+      has_viewport,
+      has_main,
+      has_nav,
+      has_contact,
+      has_skills,
+      has_projects,
+      has_github,
+      has_linkedin,
+      has_csp,
+      has_frame_protection,
+      has_referrer_policy,
+      has_lang,
+      uses_https
+    FROM history
+    WHERE created_at >= datetime('now', ?)
+    ORDER BY created_at DESC
+    LIMIT 5000`,
+  ).bind(`-${periodDays} days`).all<Record<string, string | number | null>>();
   const columns = [
-    "created_at", "overall_score", "recruiter_score", "technical_score", "accessibility_score",
-    "projects_score", "security_score", "has_contact", "has_github", "has_linkedin", "has_projects",
-    "project_link_count", "has_csp", "has_frame_protection", "has_referrer_policy", "has_lang",
-    "missing_alt_count", "image_count", "load_time_ms", "uses_https",
+    "created_at", "hostname", "portfolio_url", "analysis_number", "overall_score", "previous_score", "score_delta",
+    "recruiter_score", "technical_score", "accessibility_score", "projects_score", "security_score",
+    "status_code", "load_time_ms", "title", "title_length", "description_length", "text_length", "h1_count", "h2_count",
+    "image_count", "missing_alt_count", "link_count", "project_link_count", "has_viewport", "has_main", "has_nav",
+    "has_contact", "has_skills", "has_projects", "has_github", "has_linkedin", "has_csp", "has_frame_protection",
+    "has_referrer_policy", "has_lang", "uses_https",
   ];
-  const csv = [columns.join(","), ...rows.results.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\n");
+  const csv = `\uFEFF${[columns.join(","), ...rows.results.map((row) => columns.map((column) => csvCell(row[column])).join(","))].join("\n")}`;
   return new Response(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="portfoliolens-observations-${periodDays}j.csv"`,
+      "content-disposition": `attachment; filename="portfoliolens-donnees-completes-${periodDays}j.csv"`,
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff",
     },

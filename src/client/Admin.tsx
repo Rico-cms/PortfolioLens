@@ -57,7 +57,7 @@ export function AdminPage({ logo }: { logo: ReactNode }) {
         <div><span className="admin-kicker">Espace propriétaire</span><h1>Ce qui se passe<br /><em>sur PortfolioLens.</em></h1><p>Données agrégées, tendances et enseignements directement exploitables.</p></div>
         <div className="admin-toolbar-actions">
           <label>Période<select value={days} onChange={(event) => setDays(Number(event.target.value))}><option value="7">7 jours</option><option value="30">30 jours</option><option value="90">90 jours</option><option value="365">12 mois</option></select></label>
-          <a href={`/api/admin/export.csv?days=${days}`}>↓ Export CSV anonymisé</a>
+          <a href={`/api/admin/export.csv?days=${days}`}>↓ Export CSV complet</a>
           <button type="button" onClick={logout}>Se déconnecter</button>
         </div>
       </div>
@@ -155,8 +155,8 @@ function DashboardContent({ dashboard, loading }: { dashboard: AdminDashboardDat
       </div>
 
       <section className="admin-panel recent-audits">
-        <div className="admin-panel-heading"><div><span>Activité récente</span><h2>Les derniers audits détaillés</h2></div><p>Les rapports complets sont supprimés après 30 jours.</p></div>
-        {dashboard.recentAudits.length ? <div className="admin-table-wrap"><table><thead><tr><th>Portfolio</th><th>Date</th><th>Score</th><th>Rapport</th></tr></thead><tbody>{dashboard.recentAudits.map((audit) => <tr key={audit.id}><td>{audit.hostname}</td><td>{new Date(audit.createdAt).toLocaleDateString("fr-FR", { dateStyle: "medium" })}</td><td><b>{audit.overallScore}/100</b></td><td><a href={`/report/${audit.id}`}>Ouvrir ↗</a></td></tr>)}</tbody></table></div> : <EmptyState text="Aucun audit enregistré pour le moment." />}
+        <div className="admin-panel-heading"><div><span>Historique</span><h2>Les 30 dernières analyses</h2></div><p>L’adresse et les scores sont conservés 12 mois pour suivre l’évolution d’un même portfolio.</p></div>
+        {dashboard.recentAudits.length ? <div className="admin-table-wrap"><table><thead><tr><th>Portfolio</th><th>Passage</th><th>Date</th><th>Score</th><th>Évolution</th><th>Rapport</th></tr></thead><tbody>{dashboard.recentAudits.map((audit) => <tr key={audit.id}><td><a className="portfolio-address" href={audit.url} target="_blank" rel="noreferrer"><strong>{audit.hostname}</strong><small>{audit.url}</small></a></td><td>#{audit.analysisCount}</td><td>{new Date(audit.createdAt).toLocaleDateString("fr-FR", { dateStyle: "medium" })}</td><td><b>{audit.overallScore}/100</b></td><td>{audit.scoreDelta === null ? <span className="score-delta score-delta-neutral">Premier passage</span> : <span className={`score-delta ${audit.scoreDelta > 0 ? "score-delta-up" : audit.scoreDelta < 0 ? "score-delta-down" : "score-delta-neutral"}`}>{audit.scoreDelta > 0 ? "+" : ""}{audit.scoreDelta} points</span>}</td><td>{audit.reportAvailable ? <a href={`/report/${audit.id}`}>Ouvrir ↗</a> : <span className="report-expired">Détail expiré</span>}</td></tr>)}</tbody></table></div> : <EmptyState text="Aucune analyse enregistrée pour le moment." />}
       </section>
       <p className="admin-generated">Actualisé le {new Date(dashboard.generatedAt).toLocaleString("fr-FR")}. Les statistiques d’audience excluent les visiteurs ayant refusé les cookies.</p>
     </div>

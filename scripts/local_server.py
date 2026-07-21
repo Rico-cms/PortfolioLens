@@ -238,12 +238,25 @@ def local_dashboard():
         day = today.fromordinal(today.toordinal() - offset).isoformat()
         daily_audits = sum(1 for audit in audits if audit["createdAt"][:10] == day)
         trend.append({"day": day, "pageViews": 0, "audits": daily_audits})
-    recent = sorted(audits, key=lambda audit: audit["createdAt"], reverse=True)[:12]
+    portfolio_history = {}
+    history_rows = []
+    for audit in sorted(audits, key=lambda item: item["createdAt"]):
+        previous = portfolio_history.get(audit["hostname"])
+        passage = 1 if previous is None else previous["passage"] + 1
+        history_rows.append({
+            "id": audit["id"], "hostname": audit["hostname"], "url": audit["url"],
+            "overallScore": audit["overallScore"],
+            "previousScore": None if previous is None else previous["score"],
+            "scoreDelta": None if previous is None else audit["overallScore"] - previous["score"],
+            "analysisCount": passage, "reportAvailable": True, "createdAt": audit["createdAt"],
+        })
+        portfolio_history[audit["hostname"]] = {"passage": passage, "score": audit["overallScore"]}
+    recent = list(reversed(history_rows))[:30]
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(), "periodDays": 30,
         "totals": {"pageViews": 0, "uniqueVisitors": 0, "sessions": 0, "audits": count, "conversionRate": 0, "averageScore": round(sum(audit["overallScore"] for audit in audits) / count) if count else 0},
         "scoreAverages": averages, "trend": trend, "commonIssues": issues, "devices": [], "countries": [],
-        "recentAudits": [{"id": audit["id"], "hostname": audit["hostname"], "overallScore": audit["overallScore"], "createdAt": audit["createdAt"]} for audit in recent],
+        "recentAudits": recent,
     }
 
 
