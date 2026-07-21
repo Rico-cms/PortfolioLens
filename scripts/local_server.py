@@ -133,8 +133,57 @@ def analyse(raw_url):
         "hasCsp": "content-security-policy" in headers,
         "hasFrameProtection": "x-frame-options" in headers or "frame-ancestors" in headers.get("content-security-policy", ""),
         "hasReferrerPolicy": "referrer-policy" in headers, "usesHttps": final_url.startswith("https://"),
+        "headings": parser.h1[:5], "contentSample": text[:12_000],
+        "projectSamples": [text[:1_200]] if has_projects else [],
     }
     return make_report(signals, parsed.hostname.lower().removeprefix("www."))
+
+
+def local_positioning(s):
+    declared = " ".join([s.get("title", ""), s.get("description", ""), *s.get("h1", [])]).lower()
+    content = " ".join([declared, s.get("contentSample", ""), *s.get("projectSamples", [])]).lower()
+    role_rules = [
+        ("Développeur full-stack", ["full-stack", "full stack", "fullstack"]),
+        ("Développeur frontend", ["frontend", "front-end", "react", "vue.js", "vuejs", "angular", "next.js"]),
+        ("Développeur backend", ["backend", "back-end", "api", "django", "laravel", "spring boot"]),
+        ("Développeur mobile", ["mobile developer", "flutter", "react native", "android", "ios"]),
+        ("Data & intelligence artificielle", ["machine learning", "data scientist", "intelligence artificielle", "artificial intelligence", "llm"]),
+        ("DevOps & cloud", ["devops", "kubernetes", "terraform", "cloud engineer"]),
+        ("Product designer / UX", ["product designer", "ux designer", "ui/ux", "figma"]),
+        ("Product / project manager", ["product manager", "project manager", "chef de projet", "product owner"]),
+    ]
+    sector_rules = [
+        ("SaaS B2B", ["saas", "b2b", "crm", "erp", "dashboard", "tableau de bord"]),
+        ("E-commerce & retail", ["e-commerce", "ecommerce", "marketplace", "checkout", "boutique en ligne"]),
+        ("Fintech & finance", ["fintech", "finance", "banking", "banque", "paiement", "payment"]),
+        ("Santé & medtech", ["santé", "healthcare", "medical", "patient", "medtech"]),
+        ("Éducation & edtech", ["edtech", "éducation", "e-learning", "formation"]),
+        ("Transport & logistique", ["logistique", "transport", "livraison", "delivery", "mobilité"]),
+        ("Immobilier", ["immobilier", "real estate", "property"]),
+        ("Voyage & hospitalité", ["travel", "voyage", "tourisme", "hôtel", "booking"]),
+    ]
+    def best(text, rules, default):
+        scored = [(sum(keyword in text for keyword in keywords), label, keywords) for label, keywords in rules]
+        score, label, keywords = max(scored, default=(0, default, []))
+        return (label if score else default), score, [keyword for keyword in keywords if keyword in text]
+    declared_role, _, _ = best(declared, role_rules, "Positionnement non précisé")
+    demonstrated_role, role_score, role_hits = best(content, role_rules, "Positionnement non précisé")
+    sector, sector_score, sector_hits = best(content, sector_rules, "Secteur non déterminé")
+    if declared_role == "Positionnement non précisé" or demonstrated_role == "Positionnement non précisé": alignment = 52
+    elif declared_role == demonstrated_role: alignment = 88
+    else: alignment = 58
+    confidence = min(90, 30 + (role_score + sector_score) * 10)
+    evidence = []
+    for fragment in re.split(r"(?<=[.!?])\s+", s.get("contentSample", "")):
+        if 24 <= len(fragment) <= 280 and any(keyword in fragment.lower() for keyword in role_hits + sector_hits): evidence.append(fragment.strip())
+        if len(evidence) == 4: break
+    if not evidence and s.get("title"): evidence = [f"Titre observé : {s['title']}"]
+    gaps, actions = [], []
+    if declared_role == "Positionnement non précisé": gaps.append("Le rôle recherché n’est pas formulé explicitement."); actions.append("Annonce clairement le rôle visé dès le premier écran.")
+    if sector == "Secteur non déterminé": gaps.append("Aucun secteur dominant ne ressort des projets."); actions.append("Précise le contexte métier de chaque projet.")
+    if alignment < 60: gaps.append("Le rôle annoncé et les preuves visibles ne racontent pas encore la même histoire."); actions.append("Mets en premier les projets qui prouvent le rôle ciblé.")
+    summary = f"{demonstrated_role} ressort principalement dans un contexte {sector}. L’alignement avec le rôle annoncé est estimé à {alignment}/100."
+    return {"declaredRole": declared_role, "demonstratedRole": demonstrated_role, "primarySector": sector, "secondarySectors": [], "expertise": list(dict.fromkeys(role_hits))[:6], "alignmentScore": alignment, "confidence": confidence, "summary": summary, "evidence": evidence, "gaps": gaps[:4], "recommendations": actions[:4], "source": "deterministic"}
 
 
 def make_report(s, hostname):
@@ -162,7 +211,7 @@ def make_report(s, hostname):
     verdict = "Prêt à convaincre" if overall >= 85 else "Solide, encore perfectible" if overall >= 70 else "Du potentiel à révéler" if overall >= 50 else "Le message doit être clarifié"
     summary = f"{hostname} possède une base {'convaincante' if overall >= 70 else 'à renforcer'}. Les recommandations ci-dessous ciblent les signaux qu’un recruteur peut vérifier rapidement."
     audit_id = hashlib.sha256(f"{hostname}{time.time()}".encode()).hexdigest()[:12]
-    return {"id": audit_id, "url": s["url"], "hostname": hostname, "createdAt": datetime.now(timezone.utc).isoformat(), "overallScore": overall, "scores": scores, "summary": summary, "verdict": verdict, "findings": findings, "recommendations": recommendations[:5], "signals": s, "aiEnhanced": False}
+    return {"id": audit_id, "url": s["url"], "hostname": hostname, "createdAt": datetime.now(timezone.utc).isoformat(), "overallScore": overall, "scores": scores, "summary": summary, "verdict": verdict, "findings": findings, "recommendations": recommendations[:5], "signals": s, "positioning": local_positioning(s), "aiEnhanced": False}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -184,7 +233,11 @@ class Handler(SimpleHTTPRequestHandler):
             if "pl_admin_local=1" not in self.headers.get("Cookie", ""): return self.send_json({"error": "Authentification requise."}, 401)
             return self.send_json({"dashboard": local_dashboard()})
         match = re.fullmatch(r"/api/audits/([a-f0-9]{12})", self.path)
-        if match: return self.send_json({"audit": REPORTS[match.group(1)]}) if match.group(1) in REPORTS else self.send_json({"error": "Rapport introuvable."}, 404)
+        if match:
+            if match.group(1) not in REPORTS: return self.send_json({"error": "Rapport introuvable."}, 404)
+            audit = dict(REPORTS[match.group(1)])
+            if not audit.get("positioning"): audit["positioning"] = local_positioning(audit["signals"])
+            return self.send_json({"audit": audit})
         if self.path.startswith("/report/") or self.path in {"/admin", "/privacy"}:
             self.path = "/index.html"
         return super().do_GET()
@@ -252,10 +305,22 @@ def local_dashboard():
         })
         portfolio_history[audit["hostname"]] = {"passage": passage, "score": audit["overallScore"]}
     recent = list(reversed(history_rows))[:30]
+    positioned = [audit["positioning"] for audit in audits if audit.get("positioning")]
+    def positioning_distribution(key):
+        counts = {}
+        for item in positioned:
+            label = item.get(key)
+            if label and label not in {"Secteur non déterminé", "Positionnement non précisé"}: counts[label] = counts.get(label, 0) + 1
+        total = len(positioned) or 1
+        return [{"label": label, "count": value, "percentage": round(value * 100 / total)} for label, value in sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))]
+    for row in history_rows:
+        positioning = REPORTS[row["id"]].get("positioning", {})
+        row.update({"primarySector": positioning.get("primarySector"), "demonstratedRole": positioning.get("demonstratedRole"), "alignmentScore": positioning.get("alignmentScore"), "positioningConfidence": positioning.get("confidence")})
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(), "periodDays": 30,
         "totals": {"pageViews": 0, "uniqueVisitors": 0, "sessions": 0, "audits": count, "conversionRate": 0, "averageScore": round(sum(audit["overallScore"] for audit in audits) / count) if count else 0},
         "scoreAverages": averages, "trend": trend, "commonIssues": issues, "devices": [], "countries": [],
+        "positioning": {"analyzed": len(positioned), "coverageRate": round(len(positioned) * 100 / count) if count else 0, "averageAlignment": round(sum(item.get("alignmentScore", 0) for item in positioned) / len(positioned)) if positioned else 0, "topSectors": positioning_distribution("primarySector"), "topRoles": positioning_distribution("demonstratedRole")},
         "recentAudits": recent,
     }
 

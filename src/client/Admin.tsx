@@ -154,9 +154,23 @@ function DashboardContent({ dashboard, loading }: { dashboard: AdminDashboardDat
         </section>
       </div>
 
+      <section className="admin-panel positioning-overview">
+        <div className="admin-panel-heading"><div><span>Cartographie professionnelle</span><h2>Ce que les portfolios cherchent à démontrer</h2></div><p>Secteurs et rôles probables, calculés uniquement lorsque des preuves suffisantes sont visibles.</p></div>
+        <div className="positioning-admin-grid">
+          <div className="positioning-admin-kpis">
+            <article><span>Analyses enrichies</span><strong>{dashboard.positioning.analyzed}</strong><p>{dashboard.positioning.coverageRate}% des audits de la période</p></article>
+            <article><span>Alignement moyen</span><strong>{dashboard.positioning.averageAlignment}/100</strong><p>Entre le rôle annoncé et les preuves détectées</p></article>
+          </div>
+          <div className="admin-distributions positioning-distributions">
+            <Distribution title="Secteurs dominants" items={dashboard.positioning.topSectors} />
+            <Distribution title="Rôles démontrés" items={dashboard.positioning.topRoles} />
+          </div>
+        </div>
+      </section>
+
       <section className="admin-panel recent-audits">
         <div className="admin-panel-heading"><div><span>Historique</span><h2>Les 30 dernières analyses</h2></div><p>L’adresse et les scores sont conservés 12 mois pour suivre l’évolution d’un même portfolio.</p></div>
-        {dashboard.recentAudits.length ? <div className="admin-table-wrap"><table><thead><tr><th>Portfolio</th><th>Passage</th><th>Date</th><th>Score</th><th>Évolution</th><th>Rapport</th></tr></thead><tbody>{dashboard.recentAudits.map((audit) => <tr key={audit.id}><td><a className="portfolio-address" href={audit.url} target="_blank" rel="noreferrer"><strong>{audit.hostname}</strong><small>{audit.url}</small></a></td><td>#{audit.analysisCount}</td><td>{new Date(audit.createdAt).toLocaleDateString("fr-FR", { dateStyle: "medium" })}</td><td><b>{audit.overallScore}/100</b></td><td>{audit.scoreDelta === null ? <span className="score-delta score-delta-neutral">Premier passage</span> : <span className={`score-delta ${audit.scoreDelta > 0 ? "score-delta-up" : audit.scoreDelta < 0 ? "score-delta-down" : "score-delta-neutral"}`}>{audit.scoreDelta > 0 ? "+" : ""}{audit.scoreDelta} points</span>}</td><td>{audit.reportAvailable ? <a href={`/report/${audit.id}`}>Ouvrir ↗</a> : <span className="report-expired">Détail expiré</span>}</td></tr>)}</tbody></table></div> : <EmptyState text="Aucune analyse enregistrée pour le moment." />}
+        {dashboard.recentAudits.length ? <div className="admin-table-wrap"><table><thead><tr><th>Portfolio</th><th>Passage</th><th>Date</th><th>Score</th><th>Évolution</th><th>Positionnement</th><th>Alignement</th><th>Rapport</th></tr></thead><tbody>{dashboard.recentAudits.map((audit) => <tr key={audit.id}><td><a className="portfolio-address" href={audit.url} target="_blank" rel="noreferrer"><strong>{audit.hostname}</strong><small>{audit.url}</small></a></td><td>#{audit.analysisCount}</td><td>{new Date(audit.createdAt).toLocaleDateString("fr-FR", { dateStyle: "medium" })}</td><td><b>{audit.overallScore}/100</b></td><td>{audit.scoreDelta === null ? <span className="score-delta score-delta-neutral">Premier passage</span> : <span className={`score-delta ${audit.scoreDelta > 0 ? "score-delta-up" : audit.scoreDelta < 0 ? "score-delta-down" : "score-delta-neutral"}`}>{audit.scoreDelta > 0 ? "+" : ""}{audit.scoreDelta} points</span>}</td><td><span className="positioning-cell"><strong>{audit.primarySector || "Non analysé"}</strong><small>{audit.demonstratedRole || "—"}{audit.positioningConfidence !== null ? ` · confiance ${audit.positioningConfidence}%` : ""}</small></span></td><td>{audit.alignmentScore !== null ? `${audit.alignmentScore}/100` : "—"}</td><td>{audit.reportAvailable ? <a href={`/report/${audit.id}`}>Ouvrir ↗</a> : <span className="report-expired">Détail expiré</span>}</td></tr>)}</tbody></table></div> : <EmptyState text="Aucune analyse enregistrée pour le moment." />}
       </section>
       <p className="admin-generated">Actualisé le {new Date(dashboard.generatedAt).toLocaleString("fr-FR")}. Les statistiques d’audience excluent les visiteurs ayant refusé les cookies.</p>
     </div>

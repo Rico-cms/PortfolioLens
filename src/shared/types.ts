@@ -26,6 +26,24 @@ export interface PageSignals {
   hasFrameProtection: boolean;
   hasReferrerPolicy: boolean;
   usesHttps: boolean;
+  headings?: string[];
+  contentSample?: string;
+  projectSamples?: string[];
+}
+
+export interface PositioningAnalysis {
+  declaredRole: string;
+  demonstratedRole: string;
+  primarySector: string;
+  secondarySectors: string[];
+  expertise: string[];
+  alignmentScore: number;
+  confidence: number;
+  summary: string;
+  evidence: string[];
+  gaps: string[];
+  recommendations: string[];
+  source: "hybrid" | "deterministic";
 }
 
 export interface Finding {
@@ -53,6 +71,7 @@ export interface AuditResult {
   findings: Finding[];
   recommendations: Recommendation[];
   signals: PageSignals;
+  positioning?: PositioningAnalysis;
   screenshotUrl?: string;
   aiEnhanced: boolean;
 }
@@ -89,6 +108,13 @@ export interface AdminDashboardData {
   commonIssues: Array<{ key: string; label: string; count: number; percentage: number }>;
   devices: Array<{ label: string; count: number; percentage: number }>;
   countries: Array<{ label: string; count: number; percentage: number }>;
+  positioning: {
+    analyzed: number;
+    coverageRate: number;
+    averageAlignment: number;
+    topSectors: Array<{ label: string; count: number; percentage: number }>;
+    topRoles: Array<{ label: string; count: number; percentage: number }>;
+  };
   recentAudits: Array<{
     id: string;
     hostname: string;
@@ -98,6 +124,10 @@ export interface AdminDashboardData {
     scoreDelta: number | null;
     analysisCount: number;
     reportAvailable: boolean;
+    primarySector: string | null;
+    demonstratedRole: string | null;
+    alignmentScore: number | null;
+    positioningConfidence: number | null;
     createdAt: string;
   }>;
 }

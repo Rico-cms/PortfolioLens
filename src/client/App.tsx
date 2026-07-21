@@ -113,6 +113,36 @@ function scoreStatus(key: ScoreKey, score: number) {
   return score >= 80 ? "Très solide" : score >= 60 ? "À renforcer" : "Prioritaire";
 }
 
+function PositioningSection({ audit }: { audit: AuditResult }) {
+  const positioning = audit.positioning;
+  if (!positioning) return null;
+  return (
+    <section className="positioning-section" aria-labelledby="positioning-title">
+      <div className="positioning-heading">
+        <div><span className="section-kicker">Positionnement & expertise</span><h2 id="positioning-title">Ce que ton portfolio<br /><em>fait réellement comprendre.</em></h2></div>
+        <div className="positioning-confidence"><strong>{positioning.confidence}%</strong><span>Niveau de confiance</span><small>Hypothèse fondée sur les contenus et projets visibles</small></div>
+      </div>
+      <p className="positioning-summary">{positioning.summary}</p>
+      <div className="positioning-comparison">
+        <article><span>Positionnement déclaré</span><h3>{positioning.declaredRole}</h3><p>Ce que le titre, l’introduction et les principaux intitulés annoncent.</p></article>
+        <div className="alignment-meter"><strong>{positioning.alignmentScore}</strong><span>/100</span><small>Alignement</small><i><b style={{ width: `${positioning.alignmentScore}%` }} /></i></div>
+        <article><span>Positionnement démontré</span><h3>{positioning.demonstratedRole}</h3><p>Ce que les projets, technologies et preuves rendent crédible.</p></article>
+      </div>
+      <div className="positioning-sector-row">
+        <div><span>Secteur dominant probable</span><strong>{positioning.primarySector}</strong></div>
+        {positioning.secondarySectors.length > 0 && <div><span>Contextes secondaires</span><p>{positioning.secondarySectors.join(" · ")}</p></div>}
+        {positioning.expertise.length > 0 && <div className="expertise-tags"><span>Expertises visibles</span><p>{positioning.expertise.map((item) => <b key={item}>{item}</b>)}</p></div>}
+      </div>
+      <div className="positioning-details">
+        <article><h3>Preuves utilisées</h3>{positioning.evidence.length ? <ul>{positioning.evidence.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Pas assez de preuves textuelles pour conclure.</p>}</article>
+        <article><h3>Écarts observés</h3>{positioning.gaps.length ? <ul>{positioning.gaps.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Le discours et les preuves visibles sont cohérents.</p>}</article>
+        <article><h3>Pour mieux cibler</h3>{positioning.recommendations.length ? <ul>{positioning.recommendations.map((item) => <li key={item}>{item}</li>)}</ul> : <p>Continue à renforcer les preuves concrètes.</p>}</article>
+      </div>
+      <p className="positioning-disclaimer">Cette lecture est une hypothèse professionnelle, pas une qualification de la personne. Elle porte uniquement sur le contenu public du portfolio.</p>
+    </section>
+  );
+}
+
 function WcagMethodology() {
   return (
     <section className="wcag-methodology" aria-labelledby="wcag-methodology-title">
@@ -332,6 +362,7 @@ function Home() {
             <article><span>02</span><h3>Preuves & projets</h3><p>Tes réalisations racontent-elles le problème, ta contribution et le résultat ?</p></article>
             <article><span>03</span><h3>Qualité technique</h3><p>Structure, vitesse, mobile et métadonnées : les fondamentaux sont-ils solides ?</p></article>
             <article><span>04</span><h3>Indicateurs d’accessibilité</h3><p>Quels fondamentaux WCAG 2.2 peut-on vérifier automatiquement dans la page ?</p></article>
+            <article><span>05</span><h3>Positionnement & expertise</h3><p>Le rôle annoncé correspond-il aux secteurs, compétences et preuves réellement mis en avant ?</p></article>
           </div>
         </section>
 
@@ -429,6 +460,8 @@ function Report({ id }: { id: string }) {
           </div>
           {selectedSignal && <SignalDetail signal={selectedSignal} audit={audit} />}
         </section>
+
+        <PositioningSection audit={audit} />
 
         <WcagMethodology />
 

@@ -13,6 +13,7 @@ PortfolioLens audite un portfolio développeur comme le ferait un recruteur pres
 - Turnstile, facultatif en local, pour protéger la création d’audits.
 - D1 pour une mesure d’audience propriétaire, consentie et pseudonymisée ;
 - un espace administrateur privé pour les tendances, l’évolution des portfolios, les problèmes fréquents et l’export CSV complet.
+- une lecture hybride du positionnement professionnel : rôle déclaré, rôle démontré, secteurs probables, expertises visibles et niveau d’alignement.
 
 Si Browser Run ou Workers AI sont indisponibles, l’application bascule respectivement vers une analyse HTML par `fetch` et des recommandations déterministes. Les rapports restent donc utilisables sans IA.
 
@@ -76,7 +77,7 @@ npm run db:migrate:remote
 npm run deploy
 ```
 
-L’export CSV contient l’adresse publique soumise, le domaine, le numéro de passage, l’évolution du score et l’ensemble des signaux techniques observés. Il ne contient aucun identifiant analytics, aucune adresse IP et aucune donnée de session. Il permet ainsi de produire des cas d’usage fiables et de suivre les améliorations d’un portfolio au fil de ses réanalyses.
+L’export CSV contient l’adresse publique soumise, le domaine, le numéro de passage, l’évolution du score, l’ensemble des signaux techniques et les hypothèses structurées de positionnement observées. Il ne contient aucun identifiant analytics, aucune adresse IP et aucune donnée de session. Il permet ainsi de produire des cas d’usage fiables et de suivre les améliorations d’un portfolio au fil de ses réanalyses.
 
 Pour renforcer encore l’accès propriétaire, il est recommandé de placer `/admin` et `/api/admin/*` derrière Cloudflare Access en complément du mot de passe applicatif.
 
